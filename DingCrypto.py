@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-  
-# author = yang heng xing
+# author = xingege
 # email =shuizhengqi1@163.com
-# date = 2018/3/12 下午4:10
-# filename=util
+# date = 2018/3/15 下午4:26
+# filename=DingCrypto
 import StringIO, base64, binascii, hashlib, string, struct
 from random import choice
 
@@ -10,11 +10,10 @@ from Crypto.Cipher import AES
 
 
 class DingCrypto:
-    def __init__(self,encodingAesKey,key):
+    def __init__(self, encodingAesKey, key):
         self.encodingAesKey = encodingAesKey
         self.key = key
         self.aesKey = base64.b64decode(self.encodingAesKey + '=')
-        self.pks7Padding = ''
 
     def encrypt(self, content):
         """
@@ -28,7 +27,7 @@ class DingCrypto:
         iv = self.aesKey[:16]
         aesEncode = AES.new(self.aesKey, AES.MODE_CBC, iv)
         aesEncrypt = aesEncode.encrypt(contentEncode)
-        return base64.encodestring(aesEncrypt).replace('\n','')
+        return base64.encodestring(aesEncrypt).replace('\n', '')
 
     def length(self, content):
         """
@@ -50,8 +49,16 @@ class DingCrypto:
         val = 32 - (l % 32)
         for _ in xrange(val):
             output.write('%02x' % val)
-        self.pks7Padding = binascii.unhexlify(output.getvalue())
-        return content + self.pks7Padding
+        return content + binascii.unhexlify(output.getvalue())
+
+    def pks7decode(self, content):
+        nl = len(content)
+        val = int(binascii.hexlify(content[-1]), 16)
+        if val > 32:
+            raise ValueError('Input is not padded or padding is corrupt')
+
+        l = nl - val
+        return content[:l]
 
     ##解密钉钉发送的数据
     def decrypt(self, content):
@@ -64,8 +71,9 @@ class DingCrypto:
 
         iv = self.aesKey[:16]  ##初始向量
         aesDecode = AES.new(self.aesKey, AES.MODE_CBC, iv)
-        decodeRes = aesDecode.decrypt(content)[20:].replace(self.key,'').replace(self.key,'').replace(self.pks7Padding,'') ##获取去除初始向量，四位msg长度以及尾部corpid
-        return decodeRes
+        decodeRes = aesDecode.decrypt(content)[20:].replace(self.key, '')
+        ##获取去除初始向量，四位msg长度以及尾部corpid
+        return self.pks7decode(decodeRes)
 
     def generateRandomKey(self, size,
                           chars=string.ascii_letters + string.ascii_lowercase + string.ascii_uppercase + string.digits):
