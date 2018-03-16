@@ -62,7 +62,7 @@ class DingCrypto:
         iv = content[:AES.block_size]  ##初始向量
         aesDecode = AES.new(self.aesKey, AES.MODE_CBC, iv)
         decodeRes = aesDecode.decrypt(content[AES.block_size:])[4:].replace(self.key, '')  ##获取去除初始向量，四位msg长度以及尾部corpid
-        print decodeRes
+        return decodeRes
 
     def generateRandomKey(self, size,
                           chars=string.ascii_letters + string.ascii_lowercase + string.ascii_uppercase + string.digits):
