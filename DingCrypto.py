@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-  
-# author = xingege
+# author = yang heng xing
 # email =shuizhengqi1@163.com
-# date = 2018/3/15 下午4:26
-# filename=DingCrypto
+# date = 2018/3/12 下午4:10
+# filename=util
 import StringIO, base64, binascii, hashlib, string, struct
 from random import choice
 
@@ -10,10 +10,11 @@ from Crypto.Cipher import AES
 
 
 class DingCrypto:
-    def __init__(self,encodeAesKey,key):
-        self.encodeAesKey = encodeAesKey
+    def __init__(self,encodingAesKey,key):
+        self.encodingAesKey = encodingAesKey
         self.key = key
-        self.aesKey = base64.b64decode(self.encodeAesKey + '=')
+        self.aesKey = base64.b64decode(self.encodingAesKey + '=')
+        self.pks7Padding = ''
 
     def encrypt(self, content):
         """
@@ -49,7 +50,8 @@ class DingCrypto:
         val = 32 - (l % 32)
         for _ in xrange(val):
             output.write('%02x' % val)
-        return content + binascii.unhexlify(output.getvalue())
+        self.pks7Padding = binascii.unhexlify(output.getvalue())
+        return content + self.pks7Padding
 
     ##解密钉钉发送的数据
     def decrypt(self, content):
@@ -58,10 +60,11 @@ class DingCrypto:
         :param content:
         :return:
         """
-        content = base64.b64decode(content)  ##钉钉返回的消息体
-        iv = content[:AES.block_size]  ##初始向量
+        content = base64.decodestring(content)  ##钉钉返回的消息体
+
+        iv = self.aesKey[:16]  ##初始向量
         aesDecode = AES.new(self.aesKey, AES.MODE_CBC, iv)
-        decodeRes = aesDecode.decrypt(content[AES.block_size:])[4:].replace(self.key, '')  ##获取去除初始向量，四位msg长度以及尾部corpid
+        decodeRes = aesDecode.decrypt(content)[20:].replace(self.key,'').replace(self.key,'').replace(self.pks7Padding,'') ##获取去除初始向量，四位msg长度以及尾部corpid
         return decodeRes
 
     def generateRandomKey(self, size,
